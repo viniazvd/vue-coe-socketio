@@ -1,0 +1,35 @@
+{
+  "name": "vue-coe-socketio",
+  "version": "0.1.0",
+  "description": "socketio",
+  "readmeFilename": "README.md",
+  "keywords": [
+    "socket",
+    "websocket",
+    "socketio-client",
+    "js",
+    "vue",
+    "vuejs"
+  ],
+  "main": "dist/vue-coe-socketio.js",
+  "files": ["dist"],
+  "author": {
+    "name": "Vinicius Azevedo",
+    "email": "viniazvd@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viniazvd/vue-coe-socketio"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "bili index.js --formats cjs,es,umd"
+  },
+  "devDependencies": {
+    "bili": "^3.1.2",
+    "rollup-plugin-vue": "^4.3.2"
+  },
+  "dependencies": {
+    "socket.io-client": "^2.1.1"
+  }
+}
