@@ -1,7 +1,7 @@
 <h1 align="center">vue-coe-socketio ✅</h1>
 
 <p align="center">
-  <q>based on `socketio-client`</q>
+  <q>based on <b>socketio-client</b></q>
 </p>
 
 <p align="center">
