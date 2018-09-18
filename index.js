@@ -1,53 +1,45 @@
 import io from 'socket.io-client'
 
 export default {
-  install (Vue, connection) {
-    if (!connection) throw new Error('[vue-coe-websocket] cannot locate connection')
+  install (Vue, address, options = {}) {
+    if (!address || typeof address !== 'string') throw new Error('[vue-coe-websocket] cannot locate connection')
 
-    Vue.mixin({
-      created () {
-        const socket = io(connection)
-        socket.onevent = packet => this.emit(packet.data)
+    const socket = io(address, options)
 
-        Vue.prototype.$socket = socket
+    Vue.prototype.$socket = socket
 
-        const sockets = this.$options['sockets']
+    const addListeners = function () {
+      if (this.$options['socket']) {
+        const { events = {}, channel = '' } = this.$options.socket
 
-        if (sockets) {
-          this.$options.sockets = new Proxy({}, {
-            set: (obj, event, callback) => {
-              this.sockets = [ ...this.sockets, { event, callback } ]
+        // subscribe to a channel
+        if (channel) socket.nsp = channel
 
-              return Reflect.set(obj, event, callback)
-            },
+        if (events) {
+          Object.keys(events).forEach(event => {
+            const callback = events[event].bind(this)
 
-            // fix later
-            deleteProperty: (target, event) => Reflect.deleteProperty(target, event)
+            this.$socket.on(event, callback)
           })
-
-          Object.keys(sockets).forEach(event => (this.$options.sockets[event] = sockets[event]))
-        }
-      },
-
-      data () {
-        return {
-          sockets: []
-        }
-      },
-
-      methods: {
-        emit ([ event, payload ]) {
-          const listener = this.sockets.find(listener => event === listener.event)
-
-          if (listener && listener.callback) listener.callback.call(this, payload)
-        }
-      },
-
-      beforeDestroy () {
-        if (this.$options['sockets']) {
-          Object.keys(this.$options['sockets']).forEach(event => delete this.$options.sockets[event])
         }
       }
-    })
+    }
+
+    const removeListeners = function () {
+      if (this.$options['socket']) {
+        const { events = {} } = this.$options.socket
+
+        if (events) {
+          const callback = events[event].__binded
+          const removeListener = event => this.$socket.off(event, callback)
+
+          Object.keys(events).forEach(removeListener)
+
+          this.$socket.disconnect()
+        }
+      }
+    }
+
+    Vue.mixin({ beforeCreate: addListeners, beforeDestroy: removeListeners })
   }
 }
