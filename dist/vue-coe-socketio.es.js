@@ -1,124 +1,57 @@
 import io from 'socket.io-client';
 
-function _slicedToArray(arr, i) {
-  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
-}
-
-function _toConsumableArray(arr) {
-  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
-}
-
-function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  }
-}
-
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-function _iterableToArray(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
-}
-
-function _iterableToArrayLimit(arr, i) {
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-function _nonIterableSpread() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
-}
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
 var index = {
-  install: function install(Vue, connection) {
-    if (!connection) throw new Error('[vue-coe-websocket] cannot locate connection');
-    Vue.mixin({
-      created: function created() {
-        var _this = this;
+  install: function install(Vue, address) {
+    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    if (!address || typeof address !== 'string') throw new Error('[vue-coe-websocket] cannot locate connection');
+    var socket = io(address, options);
+    Vue.prototype.$socket = socket;
 
-        var socket = io(connection);
+    var addListeners = function addListeners() {
+      var _this = this;
 
-        socket.onevent = function (packet) {
-          return _this.emit(packet.data);
-        };
+      if (this.$options['socket']) {
+        var _this$$options$socket = this.$options.socket,
+            _this$$options$socket2 = _this$$options$socket.events,
+            events = _this$$options$socket2 === void 0 ? {} : _this$$options$socket2,
+            _this$$options$socket3 = _this$$options$socket.channel,
+            channel = _this$$options$socket3 === void 0 ? '' : _this$$options$socket3; // subscribe to a channel
 
-        Vue.prototype.$socket = socket;
-        var sockets = this.$options['sockets'];
+        if (channel) socket.nsp = channel;
 
-        if (sockets) {
-          this.$options.sockets = new Proxy({}, {
-            set: function set(obj, event, callback) {
-              _this.sockets = _toConsumableArray(_this.sockets).concat([{
-                event: event,
-                callback: callback
-              }]);
-              return Reflect.set(obj, event, callback);
-            },
-            // fix later
-            deleteProperty: function deleteProperty(target, event) {
-              return Reflect.deleteProperty(target, event);
-            }
-          });
-          Object.keys(sockets).forEach(function (event) {
-            return _this.$options.sockets[event] = sockets[event];
-          });
-        }
-      },
-      data: function data() {
-        return {
-          sockets: []
-        };
-      },
-      methods: {
-        emit: function emit(_ref) {
-          var _ref2 = _slicedToArray(_ref, 2),
-              event = _ref2[0],
-              payload = _ref2[1];
+        if (events) {
+          Object.keys(events).forEach(function (event) {
+            var callback = events[event].bind(_this);
 
-          var listener = this.sockets.find(function (listener) {
-            return event === listener.event;
-          });
-          if (listener && listener.callback) listener.callback.call(this, payload);
-        }
-      },
-      beforeDestroy: function beforeDestroy() {
-        var _this2 = this;
-
-        if (this.$options['sockets']) {
-          Object.keys(this.$options['sockets']).forEach(function (event) {
-            return delete _this2.$options.sockets[event];
+            _this.$socket.on(event, callback);
           });
         }
       }
+    };
+
+    var removeListeners = function removeListeners() {
+      var _this2 = this;
+
+      if (this.$options['socket']) {
+        var _this$$options$socket4 = this.$options.socket.events,
+            events = _this$$options$socket4 === void 0 ? {} : _this$$options$socket4;
+
+        if (events) {
+          var callback = events[event].__binded;
+
+          var removeListener = function removeListener(event) {
+            return _this2.$socket.off(event, callback);
+          };
+
+          Object.keys(events).forEach(removeListener);
+          this.$socket.disconnect();
+        }
+      }
+    };
+
+    Vue.mixin({
+      beforeCreate: addListeners,
+      beforeDestroy: removeListeners
     });
   }
 };
