@@ -6284,10 +6284,9 @@
 	    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 	    if (!address || typeof address !== 'string') throw new Error('[vue-coe-websocket] cannot locate connection');
 	    var socket = lib$1(address, options);
-	    Vue.prototype.$socket = {};
-	    var isSet = Reflect.setPrototypeOf(Vue.prototype.$socket, socket);
+	    var λ = Object.create(null);
 
-	    if (isSet) {
+	    if (Reflect.set(λ, '$socket', socket)) {
 	      var addListeners = function addListeners() {
 	        var _this = this;
 
@@ -6299,16 +6298,16 @@
 
 	          if (events) {
 	            // callback = events[event]
-	            Object.keys(events).forEach(function (event) {
-	              return _this.$socket.on(event, events[event].bind(_this));
-	            });
+	            var addListener = function addListener(event) {
+	              return λ.$socket.on(event, events[event].bind(_this));
+	            };
+
+	            Object.keys(events).forEach(addListener);
 	          }
 	        }
 	      };
 
 	      var removeListeners = function removeListeners() {
-	        var _this2 = this;
-
 	        if (this.$options['socket']) {
 	          var events = Reflect.get(this.$options.socket, 'events');
 
@@ -6316,11 +6315,11 @@
 	            var callback = events[event];
 
 	            var removeListener = function removeListener(event) {
-	              return _this2.$socket.off(event, callback);
+	              return λ.$socket.off(event, callback);
 	            };
 
 	            Object.keys(events).forEach(removeListener);
-	            this.$socket.disconnect();
+	            λ.$socket.disconnect();
 	          }
 	        }
 	      };
@@ -6328,6 +6327,11 @@
 	      Vue.mixin({
 	        beforeCreate: addListeners,
 	        beforeDestroy: removeListeners
+	      });
+	      Object.defineProperty(Vue.prototype, '$socket', {
+	        get: function get() {
+	          return λ.$socket;
+	        }
 	      });
 	    } else {
 	      console.error('[vue-coe-websocket] cannot set the prototype');
