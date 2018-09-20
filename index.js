@@ -6,40 +6,46 @@ export default {
 
     const socket = io(address, options)
 
-    Vue.prototype.$socket = socket
+    Vue.prototype.$socket = {}
+    const isSet = Reflect.setPrototypeOf(Vue.prototype.$socket, socket)
 
-    const addListeners = function () {
-      if (this.$options['socket']) {
-        const { events = {}, channel = '' } = this.$options.socket
+    if (isSet) {
+      const addListeners = function () {
+        if (this.$options['socket']) {
+          const channel = Reflect.get(this.$options.socket, 'channel')
+          const events = Reflect.get(this.$options.socket, 'events')
 
-        // subscribe to a channel
-        if (channel) socket.nsp = channel
+          // subscribe to a channel
+          if (channel) socket.nsp = channel
 
-        if (events) {
-          Object.keys(events).forEach(event => {
-            const callback = events[event].bind(this)
-
-            this.$socket.on(event, callback)
-          })
+          if (events) {
+            // callback = events[event]
+            Object.keys(events).forEach(event => this.$socket.on(event, events[event].bind(this)))
+          }
         }
       }
-    }
 
-    const removeListeners = function () {
-      if (this.$options['socket']) {
-        const { events = {} } = this.$options.socket
+      const removeListeners = function () {
+        if (this.$options['socket']) {
+          const events = Reflect.get(this.$options.socket, 'events')
 
-        if (events) {
-          const callback = events[event].__binded
-          const removeListener = event => this.$socket.off(event, callback)
+          if (events) {
+            const callback = events[event]
+            const removeListener = event => this.$socket.off(event, callback)
 
-          Object.keys(events).forEach(removeListener)
+            Object.keys(events).forEach(removeListener)
 
-          this.$socket.disconnect()
+            this.$socket.disconnect()
+          }
         }
       }
-    }
 
-    Vue.mixin({ beforeCreate: addListeners, beforeDestroy: removeListeners })
+      Vue.mixin({
+        beforeCreate: addListeners,
+        beforeDestroy: removeListeners
+      })
+    } else {
+      console.error('[vue-coe-websocket] cannot set the prototype')
+    }
   }
 }
